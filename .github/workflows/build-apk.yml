@@ -25,9 +25,12 @@ jobs:
 
       - name: Prepare Android project
         run: |
-          mkdir -p android/app/src/main/assets/www android/app/src/main/java/com/finance/app android/app/src/main/res/values
+          mkdir -p android/app/src/main/assets/www android/app/src/main/java/com/finance/app android/app/src/main/res/values android/app/src/main/res/drawable
+          test -f assets/finance-image.jpg || (echo "ERROR: Falta assets/finance-image.jpg. Descarga la imagen y súbela con exactamente ese nombre." && exit 1)
           cp index.html manifest.webmanifest sw.js google-config.js android/app/src/main/assets/www/
           cp -r icons android/app/src/main/assets/www/
+          cp -r assets android/app/src/main/assets/www/
+          cp assets/finance-image.jpg android/app/src/main/res/drawable/finance_image.jpg
 
           cat > settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
@@ -61,7 +64,7 @@ jobs:
           cat > android/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
-            <application android:theme="@style/AppTheme" android:label="Finance" android:usesCleartextTraffic="true">
+            <application android:theme="@style/AppTheme" android:label="Finance" android:icon="@drawable/finance_image" android:roundIcon="@drawable/finance_image" android:usesCleartextTraffic="true">
               <activity android:name=".MainActivity" android:exported="true">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN"/>
