@@ -16,32 +16,86 @@
     @media(min-width:650px){.app{padding-top:30px}.modal{align-items:center}.sheet{border-radius:25px;max-width:520px}}
   </style>
 </head>
+
 <body>
-  <div id="login" class="login"><div class="card login-card"><img class="logo" src="/icons/icon.svg" alt="Finanzas"><h1>Mis Finanzas</h1><p>Tu control financiero, sencillo y desde cualquier dispositivo.</p><input id="email" type="email" placeholder="Tu correo electrónico" autocomplete="email"><button class="primary" id="startBtn">Continuar</button><div class="install">Tus datos de esta V2 se guardan en este dispositivo. La sincronización por cuenta se añadirá en la siguiente capa.</div></div></div>
-  <main id="app" class="app" style="display:none">
-    <header class="top"><div><div class="brand">Mis Finanzas</div><div class="month" id="monthLabel"></div></div><span class="pill" id="userEmail"></span></header>
-    <section id="home" class="screen active">
-      <div class="card"><div class="balance-label">Saldo disponible</div><div class="balance" id="balance">S/ 0.00</div><div class="stats"><div class="stat"><small>Ingresos</small><strong class="green" id="income">S/ 0.00</strong></div><div class="stat"><small>Gastos</small><strong class="red" id="expense">S/ 0.00</strong></div><div class="stat"><small>Ahorros</small><strong class="blue" id="saving">S/ 0.00</strong></div></div><button class="primary" id="openModal">＋ Registrar movimiento</button></div>
-      <div class="section-title">Últimos movimientos</div><div class="card" id="recent"></div>
-    </section>
-    <section id="stats" class="screen"><div class="section-title">Resumen del mes</div><div class="card" id="summary"></div><div class="section-title">Distribución</div><div class="card" id="categories"></div></section>
-    <section id="settings" class="screen"><div class="section-title">Cuenta y datos</div><div class="card"><div class="row"><div class="row-main"><strong>Correo</strong><span id="settingsEmail"></span></div></div><div class="row"><div class="row-main"><strong>Datos</strong><span>Guardados localmente en este dispositivo</span></div></div><button class="secondary" style="width:100%;margin-top:14px" id="clearData">Borrar datos de este dispositivo</button></div></section>
-  </main>
-  <nav id="nav" class="nav" style="display:none"><div class="nav-inner"><button class="active" data-screen="home"><b>⌂</b>Inicio</button><button data-screen="stats"><b>◔</b>Estadísticas</button><button data-screen="settings"><b>⚙</b>Ajustes</button></div></nav>
-  <div class="modal" id="modal"><div class="sheet"><h2>Registrar movimiento</h2><div class="type"><button data-type="expense" class="sel">Gasto</button><button data-type="income">Ingreso</button><button data-type="saving">Ahorro</button></div><div class="field"><label>Monto</label><input id="amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Categoría</label><select id="category"><option>Alimentación</option><option>Transporte</option><option>Hogar</option><option>Trabajo</option><option>Salud</option><option>Entretenimiento</option><option>Compras</option><option>Otros</option></select></div><div class="field"><label>Descripción</label><input id="note" placeholder="Ej. Almuerzo"></div><div class="actions"><button class="secondary" id="cancel">Cancelar</button><button class="primary" style="margin:0" id="save">Guardar</button></div></div></div>
-<script>
-const KEY='finance-v2'; const USER='finance-v2-user'; let type='expense';
-const money=n=>'S/ '+Number(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
-const data=()=>JSON.parse(localStorage.getItem(KEY)||'[]'); const saveData=x=>localStorage.setItem(KEY,JSON.stringify(x));
-function monthKey(d=new Date()){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
-function render(){const m=monthKey(), items=data().filter(x=>x.date.startsWith(m));let inc=0,exp=0,sav=0;items.forEach(x=>{if(x.type==='income')inc+=x.amount;if(x.type==='expense')exp+=x.amount;if(x.type==='saving')sav+=x.amount});document.getElementById('balance').textContent=money(inc-exp-sav);document.getElementById('income').textContent=money(inc);document.getElementById('expense').textContent=money(exp);document.getElementById('saving').textContent=money(sav);document.getElementById('recent').innerHTML=items.slice().reverse().slice(0,8).map(x=>`<div class="row"><div class="row-main"><strong>${escapeHtml(x.note||x.category)}</strong><span>${escapeHtml(x.category)} · ${new Date(x.date).toLocaleDateString('es-PE')}</span></div><strong class="${x.type==='income'?'green':x.type==='saving'?'blue':'red'}">${x.type==='income'?'+':'-'}${money(x.amount)}</strong></div>`).join('')||'<div class="empty">Aún no hay movimientos este mes.</div>';document.getElementById('summary').innerHTML=`<div class="row"><span>Ingresos</span><strong class="green">${money(inc)}</strong></div><div class="row"><span>Gastos</span><strong class="red">${money(exp)}</strong></div><div class="row"><span>Ahorros</span><strong class="blue">${money(sav)}</strong></div><div class="row"><span>Disponible</span><strong>${money(inc-exp-sav)}</strong></div>`;const cats={};items.filter(x=>x.type==='expense').forEach(x=>cats[x.category]=(cats[x.category]||0)+x.amount);document.getElementById('categories').innerHTML=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="row"><span>${escapeHtml(k)}</span><strong>${money(v)}</strong></div>`).join('')||'<div class="empty">Tus categorías aparecerán aquí.</div>';document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('es-PE',{month:'long',year:'numeric'});}
-function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-function boot(){const email=localStorage.getItem(USER);if(!email){document.getElementById('login').classList.add('show');return}document.getElementById('app').style.display='block';document.getElementById('nav').style.display='block';document.getElementById('userEmail').textContent=email;document.getElementById('settingsEmail').textContent=email;render()}
-document.getElementById('startBtn').onclick=()=>{const e=document.getElementById('email').value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))return alert('Escribe un correo válido.');localStorage.setItem(USER,e);document.getElementById('login').classList.remove('show');boot()};
-document.getElementById('openModal').onclick=()=>document.getElementById('modal').classList.add('show');document.getElementById('cancel').onclick=()=>document.getElementById('modal').classList.remove('show');
-document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{type=b.dataset.type;document.querySelectorAll('[data-type]').forEach(x=>x.classList.toggle('sel',x===b))});
-document.getElementById('save').onclick=()=>{const amount=Number(document.getElementById('amount').value);if(!amount||amount<=0)return alert('Ingresa un monto válido.');const items=data();items.push({id:crypto.randomUUID(),type,amount,category:document.getElementById('category').value,note:document.getElementById('note').value.trim(),date:new Date().toISOString()});saveData(items);document.getElementById('amount').value='';document.getElementById('note').value='';document.getElementById('modal').classList.remove('show');render()};
-document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(b.dataset.screen).classList.add('active')});
-document.getElementById('clearData').onclick=()=>{if(confirm('¿Borrar todos los movimientos de este dispositivo?')){localStorage.removeItem(KEY);render()}};
-if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{}); boot();
+<div id="login" class="login show"><div class="card login-card"><img class="logo" src="/icons/icon.svg" alt="Finanzas"><h1>Mis Finanzas</h1><p id="authText">Vincula tu cuenta para sincronizar tus finanzas en tus dispositivos.</p><input id="email" type="email" placeholder="Tu correo electrónico" autocomplete="email"><button class="primary" id="startBtn">Enviar código</button><input id="otp" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" style="display:none"><button class="primary" id="verifyBtn" style="display:none">Verificar y entrar</button><button class="secondary" id="backBtn" style="display:none;width:100%;margin-top:9px">Cambiar correo</button><div class="install" id="authStatus">La sesión queda guardada en este dispositivo.</div></div></div>
+<main id="app" class="app" style="display:none">
+<header class="top"><div><div class="brand">Mis Finanzas</div><div class="month" id="monthLabel"></div></div><span class="pill" id="userEmail"></span></header>
+<section id="home" class="screen active"><div class="card"><div class="balance-label">Saldo disponible</div><div class="balance" id="balance">S/ 0.00</div><div class="stats"><div class="stat"><small>Ingresos</small><strong class="green" id="income">S/ 0.00</strong></div><div class="stat"><small>Gastos</small><strong class="red" id="expense">S/ 0.00</strong></div><div class="stat"><small>Ahorros</small><strong class="blue" id="saving">S/ 0.00</strong></div></div><button class="primary" id="openModal">＋ Registrar movimiento</button></div><div class="section-title">Últimos movimientos</div><div class="card" id="recent"></div></section>
+<section id="stats" class="screen"><div class="section-title">Resumen del mes</div><div class="card" id="summary"></div><div class="section-title">Distribución</div><div class="card" id="categories"></div></section>
+<section id="settings" class="screen"><div class="section-title">Cuenta y datos</div><div class="card"><div class="row"><div class="row-main"><strong>Correo</strong><span id="settingsEmail"></span></div></div><div class="row"><div class="row-main"><strong>Sincronización</strong><span id="syncStatus">Preparando…</span></div></div><button class="secondary" style="width:100%;margin-top:14px" id="syncNow">Sincronizar ahora</button><button class="secondary" style="width:100%;margin-top:9px" id="signOut">Cerrar sesión</button><button class="secondary" style="width:100%;margin-top:9px" id="clearData">Borrar datos locales</button></div></section>
+</main>
+<nav id="nav" class="nav" style="display:none"><div class="nav-inner"><button class="active" data-screen="home"><b>⌂</b>Inicio</button><button data-screen="stats"><b>◔</b>Estadísticas</button><button data-screen="settings"><b>⚙</b>Ajustes</button></div></nav>
+<div class="modal" id="modal"><div class="sheet"><h2>Registrar movimiento</h2><div class="type"><button data-type="expense" class="sel">Gasto</button><button data-type="income">Ingreso</button><button data-type="saving">Ahorro</button></div><div class="field"><label>Monto</label><input id="amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Categoría</label><select id="category"><option>Alimentación</option><option>Transporte</option><option>Hogar</option><option>Trabajo</option><option>Salud</option><option>Entretenimiento</option><option>Compras</option><option>Otros</option></select></div><div class="field"><label>Descripción</label><input id="note" placeholder="Ej. Almuerzo"></div><div class="actions"><button class="secondary" id="cancel">Cancelar</button><button class="primary" style="margin:0" id="save">Guardar</button></div></div></div>
+<script src="supabase-config.js"></script>
+<script type="module">
+const supabase= createClient; 
+</script>
+<script type="module">
+const {createClient}=await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+const cfg=window.FINANCE_SUPABASE;
+const supabase=createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const LEGACY_KEY="finance-v2";let user=null,items=[],currentType="expense";
+const money=n=>"S/ "+Number(n||0).toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const monthKey=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")};
+const localKey=()=>user?"finance-v2:"+user.id:LEGACY_KEY;
+const queueKey=()=>user?"finance-sync:"+user.id:"finance-sync:anon";
+const readLocal=()=>JSON.parse(localStorage.getItem(localKey())||"[]");
+const writeLocal=x=>localStorage.setItem(localKey(),JSON.stringify(x));
+const readQueue=()=>JSON.parse(localStorage.getItem(queueKey())||"[]");
+const writeQueue=x=>localStorage.setItem(queueKey(),JSON.stringify(x));
+const esc=s=>String(s??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+const status=s=>document.getElementById("syncStatus").textContent=s;
+function render(){
+ const m=monthKey(new Date()), a=items.filter(x=>monthKey(x.occurred_at||x.date)===m);let inc=0,exp=0,sav=0;
+ a.forEach(x=>{if(x.type==="income")inc+=+x.amount;if(x.type==="expense")exp+=+x.amount;if(x.type==="saving")sav+=+x.amount});
+ document.getElementById("balance").textContent=money(inc-exp-sav);document.getElementById("income").textContent=money(inc);document.getElementById("expense").textContent=money(exp);document.getElementById("saving").textContent=money(sav);
+ document.getElementById("recent").innerHTML=a.slice().sort((x,y)=>new Date(y.occurred_at||y.date)-new Date(x.occurred_at||x.date)).slice(0,8).map(x=>"<div class=\"row\"><div class=\"row-main\"><strong>"+esc(x.note||x.category)+"</strong><span>"+esc(x.category)+" · "+new Date(x.occurred_at||x.date).toLocaleDateString("es-PE")+"</span></div><strong class=\""+(x.type==="income"?"green":x.type==="saving"?"blue":"red")+"\">"+(x.type==="income"?"+":"-")+money(x.amount)+"</strong></div>").join("")||"<div class=\"empty\">Aún no hay movimientos este mes.</div>";
+ document.getElementById("summary").innerHTML="<div class=\"row\"><span>Ingresos</span><strong class=\"green\">"+money(inc)+"</strong></div><div class=\"row\"><span>Gastos</span><strong class=\"red\">"+money(exp)+"</strong></div><div class=\"row\"><span>Ahorros</span><strong class=\"blue\">"+money(sav)+"</strong></div><div class=\"row\"><span>Disponible</span><strong>"+money(inc-exp-sav)+"</strong></div>";
+ const cats={};a.filter(x=>x.type==="expense").forEach(x=>cats[x.category]=(cats[x.category]||0)+ +x.amount);
+ document.getElementById("categories").innerHTML=Object.entries(cats).sort((x,y)=>y[1]-x[1]).map(x=>"<div class=\"row\"><span>"+esc(x[0])+"</span><strong>"+money(x[1])+"</strong></div>").join("")||"<div class=\"empty\">Tus categorías aparecerán aquí.</div>";
+ document.getElementById("monthLabel").textContent=new Date().toLocaleDateString("es-PE",{month:"long",year:"numeric"});
+}
+function showApp(){document.getElementById("login").classList.remove("show");document.getElementById("app").style.display="block";document.getElementById("nav").style.display="flex";document.getElementById("userEmail").textContent=user.email;document.getElementById("settingsEmail").textContent=user.email;render();}
+function showLogin(){document.getElementById("login").classList.add("show");document.getElementById("app").style.display="none";document.getElementById("nav").style.display="none";}
+async function sendOtp(){
+ const email=document.getElementById("email").value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return alert("Escribe un correo válido.");
+ document.getElementById("authStatus").textContent="Enviando código…";
+ const r=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+ if(r.error){document.getElementById("authStatus").textContent=r.error.message;return;}
+ document.getElementById("email").disabled=true;document.getElementById("startBtn").style.display="none";document.getElementById("otp").style.display="block";document.getElementById("verifyBtn").style.display="block";document.getElementById("backBtn").style.display="block";document.getElementById("authText").textContent="Revisa tu correo e introduce el código de 6 dígitos.";document.getElementById("authStatus").textContent="Código enviado.";
+}
+async function verifyOtp(){
+ const email=document.getElementById("email").value.trim(),token=document.getElementById("otp").value.trim();if(!/^\d{6}$/.test(token))return alert("Escribe el código de 6 dígitos.");
+ const r=await supabase.auth.verifyOtp({email,token,type:"email"});if(r.error){document.getElementById("authStatus").textContent=r.error.message;return;}user=r.data.user;await initializeUser();showApp();
+}
+document.getElementById("startBtn").onclick=sendOtp;document.getElementById("verifyBtn").onclick=verifyOtp;
+document.getElementById("backBtn").onclick=()=>{document.getElementById("email").disabled=false;document.getElementById("startBtn").style.display="block";document.getElementById("otp").style.display="none";document.getElementById("verifyBtn").style.display="none";document.getElementById("backBtn").style.display="none";document.getElementById("authText").textContent="Vincula tu cuenta para sincronizar tus finanzas en tus dispositivos.";document.getElementById("authStatus").textContent="";};
+async function pushQueue(){
+ if(!navigator.onLine||!user)return;let q=readQueue(),left=[];
+ for(const op of q){try{if(op.action==="upsert"){const r=await supabase.from("transactions").upsert(op.row,{onConflict:"id"});if(r.error)throw r.error;}else if(op.action==="delete"){const r=await supabase.from("transactions").delete().eq("id",op.id);if(r.error)throw r.error;}}catch(e){left.push(op);}}
+ writeQueue(left);status(left.length?"Pendiente de conexión":"Sincronizado");
+}
+async function sync(){
+ if(!user)return;try{status("Sincronizando…");await pushQueue();const cloud=(await supabase.from("transactions").select("*").eq("user_id",user.id).order("occurred_at",{ascending:false}));if(cloud.error)throw cloud.error;
+ let local=readLocal();const legacy=JSON.parse(localStorage.getItem(LEGACY_KEY)||"[]");const map=new Map((cloud.data||[]).map(x=>[x.id,x]));
+ if(local.length===0&&legacy.length){for(const x of legacy){const row={id:x.id||crypto.randomUUID(),user_id:user.id,type:x.type,amount:+x.amount,category:x.category||"Otros",note:x.note||null,occurred_at:x.date||new Date().toISOString(),created_at:x.date||new Date().toISOString()};const r=await supabase.from("transactions").upsert(row,{onConflict:"id"});if(!r.error)map.set(row.id,row);}localStorage.removeItem(LEGACY_KEY);}
+ items=[...map.values()].sort((a,b)=>new Date(b.occurred_at)-new Date(a.occurred_at));writeLocal(items);render();status("Sincronizado");
+ }catch(e){items=readLocal();render();status(navigator.onLine?"Configura la base de datos":"Sin conexión");}
+}
+async function initializeUser(){items=readLocal();render();await sync();}
+async function saveMovement(){
+ const amount=Number(document.getElementById("amount").value);if(!amount||amount<=0)return alert("Ingresa un monto válido.");
+ const now=new Date().toISOString(),row={id:crypto.randomUUID(),user_id:user.id,type:currentType,amount,category:document.getElementById("category").value,note:document.getElementById("note").value.trim()||null,occurred_at:now,created_at:now};
+ items.unshift(row);writeLocal(items);render();document.getElementById("amount").value="";document.getElementById("note").value="";document.getElementById("modal").classList.remove("show");
+ const r=await supabase.from("transactions").upsert(row,{onConflict:"id"});if(r.error){const q=readQueue();q.push({action:"upsert",row});writeQueue(q);status("Guardado local · pendiente");}else status("Sincronizado");
+}
+document.getElementById("openModal").onclick=()=>document.getElementById("modal").classList.add("show");document.getElementById("cancel").onclick=()=>document.getElementById("modal").classList.remove("show");document.getElementById("save").onclick=saveMovement;
+document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{currentType=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("sel",x===b));});
+document.getElementById("syncNow").onclick=sync;document.getElementById("signOut").onclick=async()=>{await supabase.auth.signOut();user=null;items=[];showLogin();};
+document.getElementById("clearData").onclick=()=>{if(confirm("¿Borrar los datos locales? Los datos de la nube no se borrarán.")){localStorage.removeItem(localKey());items=[];render();}};
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(b.dataset.screen).classList.add("active");});
+window.addEventListener("online",sync);if("serviceWorker"in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
+const session=(await supabase.auth.getSession()).data.session;if(session){user=session.user;await initializeUser();showApp();}else showLogin();
+supabase.auth.onAuthStateChange(async(_event,s)=>{if(s&&s.user){user=s.user;await initializeUser();showApp();}});
 </script></body></html>
