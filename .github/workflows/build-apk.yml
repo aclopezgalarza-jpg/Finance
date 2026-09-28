@@ -34,6 +34,7 @@ jobs:
           dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
           rootProject.name='Finance'
           include ':app'
+          project(':app').projectDir = file('android/app')
           EOF
           cat > build.gradle <<'EOF'
           plugins {
