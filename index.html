@@ -67,7 +67,11 @@ async function api(payload){
       const id=String(++nativeRequestId);
       window.__financeNativeCallbacks.set(id,(ok,data)=>{
         if(ok&&data&&data.ok)resolve(data);
-        else reject(new Error((data&&data.error)||"Error del servidor."));
+        else {
+          const err=new Error((data&&data.error)||"Error del servidor.");
+          err.code=(data&&data.code)||"";
+          reject(err);
+        };
       });
       try{window.AndroidFinance.request(JSON.stringify(payload),id);}
       catch(e){window.__financeNativeCallbacks.delete(id);reject(e);}
@@ -75,7 +79,11 @@ async function api(payload){
   }
   const r=await fetch(API_URL,{method:"POST",redirect:"follow",body:JSON.stringify(payload)});
   const data=await r.json();
-  if(!data.ok) throw new Error(data.error||"Error del servidor.");
+  if(!data.ok){
+    const err=new Error(data.error||"Error del servidor.");
+    err.code=data.code||"";
+    throw err;
+  }
   return data;
 }
 
@@ -101,6 +109,13 @@ function showApp(){
  document.getElementById("userEmail").textContent=user.email;
  document.getElementById("settingsEmail").textContent=user.email;
  render();
+}
+function clearSession(){
+ localStorage.removeItem(sessionKey());
+ user=null;items=[];showLogin();
+}
+function authError(e){
+ return e&&["AUTH_INVALID","AUTH_EXPIRED"].includes(e.code);
 }
 function showLogin(){
  document.getElementById("login").classList.add("show");
@@ -139,7 +154,10 @@ async function pushQueue(){
   try{
    if(op.action==="upsert") await api({action:"upsert",user_id:user.id,token:session.token,row:op.row});
    else if(op.action==="delete") await api({action:"delete",user_id:user.id,token:session.token,id:op.id});
-  }catch(e){left.push(op);}
+  }catch(e){
+   if(authError(e)){clearSession();return;}
+   left.push(op);
+  }
  }
  writeQueue(left);
  status(left.length?"Pendiente de conexión":"Sincronizado");
@@ -166,6 +184,7 @@ async function sync(){
   items=[...map.values()].sort((a,b)=>new Date(b.occurred_at)-new Date(a.occurred_at));
   writeLocal(items);render();status("Sincronizado");
  }catch(e){
+  if(authError(e)){clearSession();return;}
   items=readLocal();render();status(navigator.onLine?e.message:"Sin conexión");
  }
 }
@@ -190,9 +209,14 @@ document.getElementById("cancel").onclick=()=>document.getElementById("modal").c
 document.getElementById("save").onclick=saveMovement;
 document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{currentType=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("sel",x===b));});
 document.getElementById("syncNow").onclick=sync;
-document.getElementById("signOut").onclick=()=>{
- if(user)localStorage.removeItem(sessionKey());
- user=null;items=[];showLogin();
+document.getElementById("signOut").onclick=async()=>{
+ const session=JSON.parse(localStorage.getItem(sessionKey())||"null");
+ try{
+   if(user&&session?.token){
+     await api({action:"logout",user_id:user.id,token:session.token});
+   }
+ }catch(e){}
+ clearSession();
 };
 document.getElementById("clearData").onclick=()=>{
  if(confirm("¿Borrar los datos locales? Los datos de Google Sheets no se borrarán.")){
