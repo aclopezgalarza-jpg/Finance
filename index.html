@@ -17,7 +17,7 @@
     *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit}button{cursor:pointer}
     .app{max-width:760px;margin:auto;min-height:100vh;padding:18px 16px 96px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.brand{font-weight:800;font-size:20px}.month{color:var(--muted);font-size:13px}.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:0 5px 22px rgba(17,24,39,.04);margin-bottom:14px}.balance-label{color:var(--muted);font-size:13px}.balance{font-size:36px;font-weight:850;letter-spacing:-1.5px;margin:6px 0 18px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{padding:12px;border-radius:15px;background:#f8fafc}.stat small{display:block;color:var(--muted);margin-bottom:5px}.stat strong{font-size:16px}.green{color:var(--green)}.red{color:var(--red)}.blue{color:var(--blue)}.primary{width:100%;border:0;border-radius:16px;background:var(--primary);color:#fff;padding:15px;font-weight:750;font-size:16px;margin-top:14px}.section-title{font-size:16px;font-weight:800;margin:20px 0 10px}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}.row-main{min-width:0}.row-main strong{display:block}.row-main span{font-size:12px;color:var(--muted)}.empty{color:var(--muted);text-align:center;padding:24px 8px}.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;justify-content:center;z-index:10}.nav-inner{max-width:760px;width:100%;display:grid;grid-template-columns:repeat(3,1fr)}.nav button{border:0;background:none;padding:13px 8px;color:var(--muted);font-size:12px}.nav button.active{color:var(--ink);font-weight:800}.nav b{display:block;font-size:18px;margin-bottom:2px}.screen{display:none}.screen.active{display:block}.modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:flex-end;z-index:20}.modal.show{display:flex}.sheet{width:100%;max-width:760px;margin:auto;background:#fff;border-radius:25px 25px 0 0;padding:20px 18px 28px}.sheet h2{margin:0 0 16px}.type{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.type button{border:1px solid var(--line);background:#fff;border-radius:13px;padding:11px}.type button.sel{background:#eef2ff;border-color:#a5b4fc}.field{margin:11px 0}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}.field input,.field select{width:100%;border:1px solid #d1d5db;border-radius:13px;padding:12px;background:#fff}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}.secondary{border:1px solid var(--line);background:#fff;border-radius:14px;padding:13px;font-weight:700}.login{min-height:100vh;display:none;align-items:center;justify-content:center}.login.show{display:flex}.login-card{width:min(420px,100%);text-align:center}.logo{width:110px;height:110px;margin:0 auto 18px;object-fit:cover;border-radius:24px;box-shadow:0 10px 30px rgba(17,24,39,.12)}.login-card h1{margin:0 0 8px}.login-card p{color:var(--muted);line-height:1.5}.login-card input{width:100%;padding:14px;border:1px solid #d1d5db;border-radius:14px;margin-top:12px}.install{font-size:12px;color:var(--muted);text-align:center;margin-top:10px}.pill{font-size:11px;background:#f1f5f9;border-radius:99px;padding:5px 8px;color:#475569}
     @media(min-width:650px){.app{padding-top:30px}.modal{align-items:center}.sheet{border-radius:25px;max-width:520px}}
-  </style>
+  .movement-row{align-items:center}.movement-actions{display:flex;align-items:center;gap:6px}.mini-btn{border:0;background:transparent;border-radius:8px;padding:6px 9px;font-size:16px;cursor:pointer}.mini-btn:hover{background:rgba(127,127,127,.12)}.mini-btn.danger{color:#c62828}</style>
 </head>
 
 <body>
@@ -95,7 +95,7 @@ function render(){
  document.getElementById("income").textContent=money(inc);
  document.getElementById("expense").textContent=money(exp);
  document.getElementById("saving").textContent=money(sav);
- document.getElementById("recent").innerHTML=a.slice().sort((x,y)=>new Date(y.occurred_at||y.date)-new Date(x.occurred_at||x.date)).slice(0,8).map(x=>"<div class=\"row\"><div class=\"row-main\"><strong>"+esc(x.note||x.category)+"</strong><span>"+esc(x.category)+" · "+new Date(x.occurred_at||x.date).toLocaleDateString("es-PE")+"</span></div><strong class=\""+(x.type==="income"?"green":x.type==="saving"?"blue":"red")+"\">"+(x.type==="income"?"+":"-")+money(x.amount)+"</strong></div>").join("")||"<div class=\"empty\">Aún no hay movimientos este mes.</div>";
+ document.getElementById("recent").innerHTML=a.slice().sort((x,y)=>new Date(y.occurred_at||y.date)-new Date(x.occurred_at||x.date)).slice(0,8).map(x=>"<div class=\"row movement-row\"><div class=\"row-main\"><strong>"+esc(x.note||x.category)+"</strong><span>"+esc(x.category)+" · "+new Date(x.occurred_at||x.date).toLocaleDateString("es-PE")+"</span></div><div class=\"movement-actions\"><strong class=\""+(x.type==="income"?"green":x.type==="saving"?"blue":"red")+"\">"+(x.type==="income"?"+":"-")+money(x.amount)+"</strong><button class=\"mini-btn\" onclick=\"editMovement('"+esc(x.id)+"')\" aria-label=\"Editar movimiento\">✎</button><button class=\"mini-btn danger\" onclick=\"deleteMovement('"+esc(x.id)+"')\" aria-label=\"Eliminar movimiento\">×</button></div></div>").join("")||"<div class=\"empty\">Aún no hay movimientos este mes.</div>";
  document.getElementById("summary").innerHTML="<div class=\"row\"><span>Ingresos</span><strong class=\"green\">"+money(inc)+"</strong></div><div class=\"row\"><span>Gastos</span><strong class=\"red\">"+money(exp)+"</strong></div><div class=\"row\"><span>Ahorros</span><strong class=\"blue\">"+money(sav)+"</strong></div><div class=\"row\"><span>Disponible</span><strong>"+money(inc-exp-sav)+"</strong></div>";
  const cats={};a.filter(x=>x.type==="expense").forEach(x=>cats[x.category]=(cats[x.category]||0)+ +x.amount);
  document.getElementById("categories").innerHTML=Object.entries(cats).sort((x,y)=>y[1]-x[1]).map(x=>"<div class=\"row\"><span>"+esc(x[0])+"</span><strong>"+money(x[1])+"</strong></div>").join("")||"<div class=\"empty\">Tus categorías aparecerán aquí.</div>";
@@ -191,21 +191,85 @@ async function sync(){
 
 async function initializeUser(){items=readLocal();render();await sync();}
 
+function getMovement(id){return items.find(x=>String(x.id)===String(id));}
+
+function openMovementEditor(row){
+ currentType=row.type||"expense";
+ document.getElementById("amount").value=String(row.amount??"");
+ document.getElementById("category").value=row.category||"Otros";
+ document.getElementById("note").value=row.note||"";
+ document.getElementById("modal").classList.add("show");
+ document.getElementById("save").dataset.editId=String(row.id);
+ document.getElementById("save").textContent="Guardar cambios";
+ document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("sel",x.dataset.type===currentType));
+}
+
+window.editMovement=function(id){
+ const row=getMovement(id);
+ if(!row)return;
+ openMovementEditor(row);
+};
+
+window.deleteMovement=async function(id){
+ const row=getMovement(id);
+ if(!row)return;
+ if(!confirm("¿Eliminar este movimiento? Esta acción también lo eliminará de Google Sheets cuando haya conexión."))return;
+ items=items.filter(x=>String(x.id)!==String(id));
+ writeLocal(items);render();
+ const session=JSON.parse(localStorage.getItem(sessionKey())||"null");
+ if(!session||!user)return;
+ try{
+   await api({action:"delete",user_id:user.id,token:session.token,id:String(id)});
+   status("Movimiento eliminado");
+ }catch(e){
+   if(authError(e)){clearSession();return;}
+   const q=readQueue();q.push({action:"delete",id:String(id)});writeQueue(q);
+   status("Eliminado local · pendiente de sincronización");
+ }
+};
+
 async function saveMovement(){
  const amount=Number(document.getElementById("amount").value);
  if(!amount||amount<=0)return alert("Ingresa un monto válido.");
- const now=new Date().toISOString();
- const row={id:crypto.randomUUID(),user_id:user.id,type:currentType,amount,category:document.getElementById("category").value,note:document.getElementById("note").value.trim()||null,occurred_at:now,created_at:now};
- items.unshift(row);writeLocal(items);render();
- document.getElementById("amount").value="";document.getElementById("note").value="";document.getElementById("modal").classList.remove("show");
+ const category=document.getElementById("category").value||"Otros";
+ const note=document.getElementById("note").value.trim()||null;
+ const editId=document.getElementById("save").dataset.editId||"";
+ let row;
+
+ if(editId){
+   const old=getMovement(editId);
+   if(!old)return;
+   row={...old,user_id:user.id,type:currentType,amount,category,note,occurred_at:old.occurred_at||new Date().toISOString(),created_at:old.created_at||new Date().toISOString()};
+   items=items.map(x=>String(x.id)===String(editId)?row:x);
+ }else{
+   const now=new Date().toISOString();
+   row={id:crypto.randomUUID(),user_id:user.id,type:currentType,amount,category,note,occurred_at:now,created_at:now};
+   items.unshift(row);
+ }
+ writeLocal(items);render();
+ document.getElementById("amount").value="";
+ document.getElementById("note").value="";
+ document.getElementById("save").dataset.editId="";
+ document.getElementById("save").textContent="Guardar";
+ document.getElementById("modal").classList.remove("show");
  const session=JSON.parse(localStorage.getItem(sessionKey())||"null");
- try{await api({action:"upsert",user_id:user.id,token:session.token,row});status("Sincronizado");}
- catch(e){const q=readQueue();q.push({action:"upsert",row});writeQueue(q);status("Guardado local · pendiente");}
+ try{
+   await api({action:"upsert",user_id:user.id,token:session.token,row});
+   status(editId?"Cambios guardados":"Sincronizado");
+ }catch(e){
+   if(authError(e)){clearSession();return;}
+   const q=readQueue();q.push({action:"upsert",row});writeQueue(q);
+   status(editId?"Cambios guardados local · pendiente":"Guardado local · pendiente");
+ }
 }
 
 document.getElementById("startBtn").onclick=login;
 document.getElementById("openModal").onclick=()=>document.getElementById("modal").classList.add("show");
-document.getElementById("cancel").onclick=()=>document.getElementById("modal").classList.remove("show");
+document.getElementById("cancel").onclick=()=>{
+ document.getElementById("save").dataset.editId="";
+ document.getElementById("save").textContent="Guardar";
+ document.getElementById("modal").classList.remove("show");
+};
 document.getElementById("save").onclick=saveMovement;
 document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{currentType=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("sel",x===b));});
 document.getElementById("syncNow").onclick=sync;
