@@ -46,8 +46,28 @@ const writeQueue=x=>localStorage.setItem(queueKey(),JSON.stringify(x));
 const esc=s=>String(s??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 const status=s=>document.getElementById("syncStatus").textContent=s;
 
+let nativeRequestId=0;
+window.__financeNativeCallbacks=window.__financeNativeCallbacks||new Map();
+window.__financeNativeCallback=(id,ok,text)=>{
+  const cb=window.__financeNativeCallbacks.get(String(id));
+  if(!cb)return;
+  window.__financeNativeCallbacks.delete(String(id));
+  try{cb(ok,JSON.parse(text||"{}"));}catch(e){cb(false,{error:"Respuesta inválida del servidor."});}
+};
+
 async function api(payload){
   if(!API_URL||API_URL.includes("PEGA_AQUI")) throw new Error("Configura la URL de Google Apps Script.");
+  if(window.AndroidFinance&&typeof window.AndroidFinance.request==="function"){
+    return await new Promise((resolve,reject)=>{
+      const id=String(++nativeRequestId);
+      window.__financeNativeCallbacks.set(id,(ok,data)=>{
+        if(ok&&data&&data.ok)resolve(data);
+        else reject(new Error((data&&data.error)||"Error del servidor."));
+      });
+      try{window.AndroidFinance.request(JSON.stringify(payload),id);}
+      catch(e){window.__financeNativeCallbacks.delete(id);reject(e);}
+    });
+  }
   const r=await fetch(API_URL,{method:"POST",redirect:"follow",body:JSON.stringify(payload)});
   const data=await r.json();
   if(!data.ok) throw new Error(data.error||"Error del servidor.");
