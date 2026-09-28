@@ -604,7 +604,7 @@ function cleanText_(value, maxLength) {
 function safeCellText_(value) {
   const s = String(value == null ? "" : value);
   // Evita que texto controlado por el usuario sea interpretado como fórmula por Sheets.
-  if (/^[=+\\-@]/.test(s)) return "'" + s;
+  if (/^[=+\-@]/.test(s)) return "'" + s;
   return s;
 }
 
