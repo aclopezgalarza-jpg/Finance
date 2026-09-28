@@ -29,9 +29,6 @@
 <div class="modal" id="modal"><div class="sheet"><h2>Registrar movimiento</h2><div class="type"><button data-type="expense" class="sel">Gasto</button><button data-type="income">Ingreso</button><button data-type="saving">Ahorro</button></div><div class="field"><label>Monto</label><input id="amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Categoría</label><select id="category"><option>Alimentación</option><option>Transporte</option><option>Hogar</option><option>Trabajo</option><option>Salud</option><option>Entretenimiento</option><option>Compras</option><option>Otros</option></select></div><div class="field"><label>Descripción</label><input id="note" placeholder="Ej. Almuerzo"></div><div class="actions"><button class="secondary" id="cancel">Cancelar</button><button class="primary" style="margin:0" id="save">Guardar</button></div></div></div>
 <script src="supabase-config.js"></script>
 <script type="module">
-const supabase= createClient; 
-</script>
-<script type="module">
 const {createClient}=await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
 const cfg=window.FINANCE_SUPABASE;
 const supabase=createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
