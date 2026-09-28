@@ -103,18 +103,23 @@ jobs:
           import org.json.JSONObject;
 
           public class MainActivity extends Activity {
+            private static final String API_URL =
+                "https://script.google.com/macros/s/AKfycbxTjFz6HbRs8zzgqtI4_NvsooLalnJr6oZO7ZgLsknzRnRnW9E_8StuUq6n6IBEiyw/exec";
+
             private WebView webView;
 
             @Override
             public void onCreate(Bundle b) {
               super.onCreate(b);
               requestWindowFeature(Window.FEATURE_NO_TITLE);
+
               webView = new WebView(this);
               webView.setWebViewClient(new WebViewClient());
               webView.getSettings().setJavaScriptEnabled(true);
               webView.getSettings().setDomStorageEnabled(true);
               webView.getSettings().setAllowFileAccess(true);
               webView.addJavascriptInterface(new FinanceBridge(), "AndroidFinance");
+
               webView.loadUrl("file:///android_asset/www/index.html");
               setContentView(webView);
             }
@@ -124,35 +129,94 @@ jobs:
               public void request(final String payload, final String requestId) {
                 new Thread(() -> {
                   boolean ok = false;
-                  String response;
+                  String response = null;
                   HttpURLConnection conn = null;
+
                   try {
-                    URL url = new URL("https://script.google.com/macros/s/AKfycbxTjFz6HbRs8zzgqtI4_NvsooLalnJr6oZO7ZgLsknzRnRnW9E_8StuUq6n6IBEiyw/exec");
+                    URL url = new URL(API_URL);
+
                     conn = (HttpURLConnection) url.openConnection();
+                    conn.setInstanceFollowRedirects(false);
                     conn.setRequestMethod("POST");
                     conn.setDoOutput(true);
                     conn.setConnectTimeout(20000);
                     conn.setReadTimeout(30000);
-                    conn.setRequestProperty("Content-Type", "text/plain; charset=UTF-8");
+                    conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                    conn.setRequestProperty("Accept", "application/json");
+
                     try (OutputStream os = conn.getOutputStream()) {
                       os.write(payload.getBytes(StandardCharsets.UTF_8));
                     }
+
                     int code = conn.getResponseCode();
-                    InputStream stream = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+
+                    // Apps Script ContentService commonly answers through a
+                    // one-time script.googleusercontent.com redirect.
+                    if (code == 301 || code == 302 || code == 303 ||
+                        code == 307 || code == 308) {
+
+                      String location = conn.getHeaderField("Location");
+                      conn.disconnect();
+                      conn = null;
+
+                      if (location == null || location.trim().isEmpty()) {
+                        throw new Exception("Google Apps Script devolvió una redirección sin destino.");
+                      }
+
+                      URL redirected = new URL(url, location);
+                      conn = (HttpURLConnection) redirected.openConnection();
+                      conn.setInstanceFollowRedirects(false);
+                      conn.setRequestMethod("GET");
+                      conn.setConnectTimeout(20000);
+                      conn.setReadTimeout(30000);
+                      conn.setRequestProperty("Accept", "application/json");
+
+                      code = conn.getResponseCode();
+                    }
+
+                    InputStream stream =
+                        code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+
                     response = readAll(stream);
-                    ok = code >= 200 && code < 400;
+
+                    if (response == null || response.trim().isEmpty()) {
+                      throw new Exception("Google Apps Script devolvió una respuesta vacía (HTTP " + code + ").");
+                    }
+
+                    // The app expects JSON. If Google returns an HTML error page,
+                    // report the real HTTP failure instead of "invalid response".
+                    try {
+                      new JSONObject(response);
+                    } catch (Exception jsonError) {
+                      throw new Exception(
+                          "Respuesta no JSON de Google Apps Script (HTTP " + code + ")."
+                      );
+                    }
+
+                    ok = code >= 200 && code < 300;
+
                   } catch (Exception e) {
-                    response = "{\"ok\":false,\"error\":" + JSONObject.quote("No se pudo conectar con Google Sheets: " + e.getMessage()) + "}";
+                    response = "{"ok":false,"error":" +
+                        JSONObject.quote(
+                            "No se pudo conectar con Google Sheets: " +
+                            String.valueOf(e.getMessage())
+                        ) +
+                        "}";
                   } finally {
                     if (conn != null) conn.disconnect();
                   }
+
                   final boolean resultOk = ok;
                   final String resultResponse = response;
+
                   runOnUiThread(() -> {
-                    String script = "window.__financeNativeCallback(" +
+                    String script =
+                        "window.__financeNativeCallback(" +
                         JSONObject.quote(requestId) + "," +
                         resultOk + "," +
-                        JSONObject.quote(resultResponse) + ")";
+                        JSONObject.quote(resultResponse) +
+                        ")";
+
                     webView.evaluateJavascript(script, null);
                   });
                 }).start();
@@ -160,17 +224,23 @@ jobs:
             }
 
             private String readAll(InputStream stream) throws Exception {
-              if (stream == null) return "{}";
+              if (stream == null) return "";
               StringBuilder sb = new StringBuilder();
-              try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+
+              try (BufferedReader br =
+                       new BufferedReader(
+                           new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+
                 String line;
-                while ((line = br.readLine()) != null) sb.append(line);
+                while ((line = br.readLine()) != null) {
+                  sb.append(line);
+                }
               }
+
               return sb.toString();
             }
           }
-          EOF
-
+EOF
           gradle wrapper --gradle-version 8.10.2
           ./gradlew assembleDebug
 
