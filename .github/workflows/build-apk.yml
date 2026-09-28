@@ -20,9 +20,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Install Android platform
-        run: sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0'
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
 
       - name: Build APK from web app
         run: |
@@ -62,6 +61,12 @@ jobs:
           mkdir -p android/app/src/main/java/com/finance/app android/app/src/main/res/values
           cat > android/app/src/main/res/values/styles.xml <<'EOF'
           <resources><style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">#111827</item><item name="android:navigationBarColor">#ffffff</item><item name="android:statusBarColor">#ffffff</item><item name="android:windowLightStatusBar">true</item></style></resources>
+          EOF
+          cat > android/app/src/main/java/com/finance/app/MainActivity.java <<'EOF'
+          package com.finance.app;
+          import android.app.Activity; import android.os.Bundle; import android.webkit.WebView; import android.webkit.WebViewClient; import android.view.Window;
+          public class MainActivity {
+          }
           EOF
           cat > android/app/src/main/java/com/finance/app/MainActivity.java <<'EOF'
           package com.finance.app;
