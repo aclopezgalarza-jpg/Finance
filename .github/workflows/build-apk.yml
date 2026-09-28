@@ -112,14 +112,12 @@ jobs:
             public void onCreate(Bundle b) {
               super.onCreate(b);
               requestWindowFeature(Window.FEATURE_NO_TITLE);
-
               webView = new WebView(this);
               webView.setWebViewClient(new WebViewClient());
               webView.getSettings().setJavaScriptEnabled(true);
               webView.getSettings().setDomStorageEnabled(true);
               webView.getSettings().setAllowFileAccess(true);
               webView.addJavascriptInterface(new FinanceBridge(), "AndroidFinance");
-
               webView.loadUrl("file:///android_asset/www/index.html");
               setContentView(webView);
             }
@@ -129,12 +127,11 @@ jobs:
               public void request(final String payload, final String requestId) {
                 new Thread(() -> {
                   boolean ok = false;
-                  String response = null;
+                  String response;
                   HttpURLConnection conn = null;
 
                   try {
                     URL url = new URL(API_URL);
-
                     conn = (HttpURLConnection) url.openConnection();
                     conn.setInstanceFollowRedirects(false);
                     conn.setRequestMethod("POST");
@@ -150,17 +147,14 @@ jobs:
 
                     int code = conn.getResponseCode();
 
-                    // Apps Script ContentService commonly answers through a
-                    // one-time script.googleusercontent.com redirect.
                     if (code == 301 || code == 302 || code == 303 ||
                         code == 307 || code == 308) {
-
                       String location = conn.getHeaderField("Location");
                       conn.disconnect();
                       conn = null;
 
                       if (location == null || location.trim().isEmpty()) {
-                        throw new Exception("Google Apps Script devolvió una redirección sin destino.");
+                        throw new Exception("Redirección de Google Apps Script sin destino.");
                       }
 
                       URL redirected = new URL(url, location);
@@ -170,38 +164,30 @@ jobs:
                       conn.setConnectTimeout(20000);
                       conn.setReadTimeout(30000);
                       conn.setRequestProperty("Accept", "application/json");
-
                       code = conn.getResponseCode();
                     }
 
                     InputStream stream =
                         code >= 400 ? conn.getErrorStream() : conn.getInputStream();
-
                     response = readAll(stream);
 
                     if (response == null || response.trim().isEmpty()) {
-                      throw new Exception("Google Apps Script devolvió una respuesta vacía (HTTP " + code + ").");
+                      throw new Exception("Google Apps Script devolvió una respuesta vacía. HTTP " + code);
                     }
 
-                    // The app expects JSON. If Google returns an HTML error page,
-                    // report the real HTTP failure instead of "invalid response".
                     try {
                       new JSONObject(response);
-                    } catch (Exception jsonError) {
-                      throw new Exception(
-                          "Respuesta no JSON de Google Apps Script (HTTP " + code + ")."
-                      );
+                    } catch (Exception ignored) {
+                      throw new Exception("Google Apps Script no devolvió JSON. HTTP " + code);
                     }
 
                     ok = code >= 200 && code < 300;
 
                   } catch (Exception e) {
-                    response = "{\"ok\":false,\"error\":" +
-                        JSONObject.quote(
-                            "No se pudo conectar con Google Sheets: " +
-                            String.valueOf(e.getMessage())
-                        ) +
-                        "}";
+                    response = new JSONObject()
+                        .put("ok", false)
+                        .put("error", "No se pudo conectar con Google Sheets: " + String.valueOf(e.getMessage()))
+                        .toString();
                   } finally {
                     if (conn != null) conn.disconnect();
                   }
@@ -210,13 +196,10 @@ jobs:
                   final String resultResponse = response;
 
                   runOnUiThread(() -> {
-                    String script =
-                        "window.__financeNativeCallback(" +
+                    String script = "window.__financeNativeCallback(" +
                         JSONObject.quote(requestId) + "," +
                         resultOk + "," +
-                        JSONObject.quote(resultResponse) +
-                        ")";
-
+                        JSONObject.quote(resultResponse) + ")";
                     webView.evaluateJavascript(script, null);
                   });
                 }).start();
@@ -226,17 +209,11 @@ jobs:
             private String readAll(InputStream stream) throws Exception {
               if (stream == null) return "";
               StringBuilder sb = new StringBuilder();
-
-              try (BufferedReader br =
-                       new BufferedReader(
-                           new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-
+              try (BufferedReader br = new BufferedReader(
+                  new InputStreamReader(stream, StandardCharsets.UTF_8))) {
                 String line;
-                while ((line = br.readLine()) != null) {
-                  sb.append(line);
-                }
+                while ((line = br.readLine()) != null) sb.append(line);
               }
-
               return sb.toString();
             }
           }
