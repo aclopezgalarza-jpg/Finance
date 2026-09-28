@@ -26,7 +26,7 @@
 <main id="app" class="app" style="display:none">
 <header class="top"><div><div class="brand">Mis Finanzas</div><div class="month" id="monthLabel"></div></div><span class="pill" id="userEmail"></span></header>
 <section id="home" class="screen active"><div class="card"><div class="balance-head"><div class="balance-label">Saldo disponible</div><button class="privacy-btn" id="togglePrivacy" type="button" aria-label="Mostrar saldos" title="Mostrar saldos">◌</button></div><div class="balance" id="balance">S/ ••••</div><div class="stats"><div class="stat"><div class="stat-head"><small>Ingresos</small><button class="section-privacy" data-privacy="income" type="button">◌</button></div><strong class="green" id="income">S/ ••••</strong></div><div class="stat"><div class="stat-head"><small>Gastos</small><button class="section-privacy" data-privacy="expense" type="button">◌</button></div><strong class="red" id="expense">S/ ••••</strong></div><div class="stat"><div class="stat-head"><small>Ahorros</small><button class="section-privacy" data-privacy="saving" type="button">◌</button></div><strong class="blue" id="saving">S/ ••••</strong></div></div><button class="primary" id="openModal">＋ Registrar movimiento</button></div><div class="section-head"><div class="section-title">Últimos movimientos</div><button class="section-privacy" id="toggleMovements" type="button">◌</button></div><div class="card" id="recent"></div></section>
-<section id="stats" class="screen"><div class="section-head"><div class="section-title">Resumen del mes</div><button class="section-privacy" data-privacy="summary" type="button">◌</button></div><div class="card" id="summary"></div><div class="section-head"><div class="section-title">Distribución</div><button class="section-privacy" data-privacy="distribution" type="button">◌</button></div><div class="card" id="categories"></div></section>
+<section id="stats" class="screen"><div class="section-head"><div class="section-title" id="statsTitle">Estadísticas</div><div style="display:flex;gap:7px;align-items:center"><select id="statsPeriod" class="pill" style="border:1px solid var(--line);background:#fff;padding:7px 9px;color:var(--ink)"><option value="month">Mes</option><option value="year">Año</option></select><button class="section-privacy" data-privacy="summary" type="button">◌</button></div></div><div class="card" id="summary"></div><div class="section-head"><div class="section-title">Distribución de gastos</div><button class="section-privacy" data-privacy="distribution" type="button">◌</button></div><div class="card" id="categories"><div id="pieChart"></div><div id="pieDetail" class="empty" style="padding:12px 8px 4px">Toca una sección de la gráfica para ver el porcentaje y total.</div></div></section>
 <section id="settings" class="screen"><div class="section-title">Cuenta y datos</div><div class="card"><div class="row"><div class="row-main"><strong>Correo</strong><span id="settingsEmail"></span></div></div><div class="row"><div class="row-main"><strong>Sincronización</strong><span id="syncStatus">Preparando…</span></div></div><button class="secondary" style="width:100%;margin-top:14px" id="syncNow">Sincronizar ahora</button><button class="secondary" style="width:100%;margin-top:9px" id="signOut">Cerrar sesión</button><button class="secondary" style="width:100%;margin-top:9px" id="clearData">Borrar datos locales</button></div></section>
 </main>
 <nav id="nav" class="nav" style="display:none"><div class="nav-inner"><button class="active" data-screen="home"><b>⌂</b>Inicio</button><button data-screen="stats"><b>◔</b>Estadísticas</button><button data-screen="settings"><b>⚙</b>Ajustes</button></div></nav>
@@ -88,8 +88,53 @@ async function api(payload){
   return data;
 }
 
+let statsPeriod="month";
+let selectedPieCategory="";
+const fmtMoney=n=>"S/ "+Number(n||0).toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2});
+function statsItems(){
+ const now=new Date();
+ return items.filter(x=>{
+   const d=new Date(x.occurred_at||x.date);
+   if(statsPeriod==="year") return d.getFullYear()===now.getFullYear();
+   return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+ });
+}
+function polar(cx,cy,r,a){const rad=(a-90)*Math.PI/180;return [cx+r*Math.cos(rad),cy+r*Math.sin(rad)]}
+function piePath(cx,cy,r,start,end){
+ const [sx,sy]=polar(cx,cy,r,end),[ex,ey]=polar(cx,cy,r,start),large=end-start>180?1:0;
+ return `M ${cx} ${cy} L ${sx} ${sy} A ${r} ${r} 0 ${large} 0 ${ex} ${ey} Z`;
+}
+function renderPie(){
+ const a=statsItems().filter(x=>x.type==="expense");
+ const cats={};
+ a.forEach(x=>{cats[x.category]=(cats[x.category]||0)+Number(x.amount||0)});
+ const entries=Object.entries(cats).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]);
+ const total=entries.reduce((s,[,v])=>s+v,0);
+ const box=document.getElementById("pieChart"),detail=document.getElementById("pieDetail");
+ if(!box||!detail)return;
+ if(!total){box.innerHTML="<div class='empty'>No hay gastos registrados en este período.</div>";detail.textContent="";return;}
+ const cx=150,cy=150,r=105;
+ let angle=0;
+ const paths=entries.map(([name,value],i)=>{
+   const sweep=value/total*360, start=angle, end=angle+sweep; angle=end;
+   return {name,value,start,end,index:i};
+ });
+ box.innerHTML=`<div style="display:flex;justify-content:center;overflow:hidden"><svg viewBox="0 0 300 300" width="min(100%,300px)" style="max-width:300px;height:auto;display:block" role="img" aria-label="Distribución de gastos">${paths.map(p=>`<path d="${piePath(cx,cy,r,p.start,p.end)}" fill="var(--pie-${p.index%8})" stroke="#fff" stroke-width="2" data-pie="${esc(p.name)}" style="cursor:pointer"></path>`).join("")}</svg></div><div style="display:grid;gap:8px;margin-top:8px">${paths.map(p=>`<button type="button" data-pie-label="${esc(p.name)}" style="display:flex;justify-content:space-between;align-items:center;border:0;background:transparent;padding:5px 0;text-align:left"><span>${esc(p.name)}</span><strong>${privacy.distribution?fmtMoney(p.value):hiddenMoney}</strong></button>`).join("")}</div>`;
+ const style=document.createElement("style");
+ style.textContent=`:root{--pie-0:#2457d6;--pie-1:#087443;--pie-2:#b42318;--pie-3:#7c3aed;--pie-4:#d97706;--pie-5:#0891b2;--pie-6:#be185d;--pie-7:#475569}`;
+ box.appendChild(style);
+ const show=p=>{
+   selectedPieCategory=p.name;
+   const pct=(p.value/total)*100;
+   detail.textContent=privacy.distribution?`${p.name} — ${pct.toFixed(1)}% — ${fmtMoney(p.value)}`:`${p.name} — ${pct.toFixed(1)}% — ${hiddenMoney}`;
+ };
+ box.querySelectorAll("[data-pie]").forEach(el=>el.onclick=()=>{const p=paths.find(x=>x.name===el.dataset.pie);if(p)show(p)});
+ box.querySelectorAll("[data-pie-label]").forEach(el=>el.onclick=()=>{const p=paths.find(x=>x.name===el.dataset.pieLabel);if(p)show(p)});
+ if(selectedPieCategory){const p=paths.find(x=>x.name===selectedPieCategory);if(p)show(p);}
+}
 function render(){
  const m=monthKey(new Date()),a=items.filter(x=>monthKey(x.occurred_at||x.date)===m);
+ const sa=statsItems();
  let inc=0,exp=0,sav=0;
  a.forEach(x=>{if(x.type==="income")inc+=+x.amount;if(x.type==="expense")exp+=+x.amount;if(x.type==="saving")sav+=+x.amount});
  document.getElementById("balance").textContent=money(inc-exp-sav,"balance");
@@ -97,9 +142,9 @@ function render(){
  document.getElementById("expense").textContent=money(exp,"expense");
  document.getElementById("saving").textContent=money(sav,"saving");
  document.getElementById("recent").innerHTML=a.slice().sort((x,y)=>new Date(y.occurred_at||y.date)-new Date(x.occurred_at||x.date)).slice(0,8).map(x=>"<div class=\"row movement-row\"><div class=\"row-main\"><strong>"+esc(x.note||x.category)+"</strong><span>"+esc(x.category)+" · "+new Date(x.occurred_at||x.date).toLocaleDateString("es-PE")+"</span></div><div class=\"movement-actions\"><strong class=\""+(x.type==="income"?"green":x.type==="saving"?"blue":"red")+"\">"+(x.type==="income"?"+":"-")+(privacy.movements?("S/ "+Number(x.amount||0).toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2})):hiddenMoney)+"</strong><button class=\"mini-btn\" onclick=\"editMovement('"+esc(x.id)+"')\" aria-label=\"Editar movimiento\">✎</button><button class=\"mini-btn danger\" onclick=\"deleteMovement('"+esc(x.id)+"')\" aria-label=\"Eliminar movimiento\">×</button></div></div>").join("")||"<div class=\"empty\">Aún no hay movimientos este mes.</div>";
- document.getElementById("summary").innerHTML="<div class=\"row\"><span>Ingresos</span><strong class=\"green\">"+money(inc,"summary")+"</strong></div><div class=\"row\"><span>Gastos</span><strong class=\"red\">"+money(exp,"summary")+"</strong></div><div class=\"row\"><span>Ahorros</span><strong class=\"blue\">"+money(sav,"summary")+"</strong></div><div class=\"row\"><span>Disponible</span><strong>"+money(inc-exp-sav,"summary")+"</strong></div>";
- const cats={};a.filter(x=>x.type==="expense").forEach(x=>cats[x.category]=(cats[x.category]||0)+ +x.amount);
- document.getElementById("categories").innerHTML=Object.entries(cats).sort((x,y)=>y[1]-x[1]).map(x=>"<div class=\"row\"><span>"+esc(x[0])+"</span><strong>"+money(x[1],"distribution")+"</strong></div>").join("")||"<div class=\"empty\">Tus categorías aparecerán aquí.</div>";
+ let sinc=0,sexp=0,ssav=0;sa.forEach(x=>{if(x.type==="income")sinc+=+x.amount;if(x.type==="expense")sexp+=+x.amount;if(x.type==="saving")ssav+=+x.amount});
+ document.getElementById("summary").innerHTML="<div class=\"row\"><span>Ingresos</span><strong class=\"green\">"+money(sinc,"summary")+"</strong></div><div class=\"row\"><span>Gastos</span><strong class=\"red\">"+money(sexp,"summary")+"</strong></div><div class=\"row\"><span>Ahorros</span><strong class=\"blue\">"+money(ssav,"summary")+"</strong></div><div class=\"row\"><span>Disponible</span><strong>"+money(sinc-sexp-ssav,"summary")+"</strong></div>";
+ renderPie();
  document.getElementById("monthLabel").textContent=new Date().toLocaleDateString("es-PE",{month:"long",year:"numeric"});
 }
 
@@ -315,6 +360,7 @@ document.getElementById("clearData").onclick=()=>{
    localStorage.removeItem(localKey());items=[];render();
  }
 };
+document.getElementById("statsPeriod").onchange=e=>{statsPeriod=e.target.value;selectedPieCategory="";document.getElementById("statsTitle").textContent=e.target.value==="year"?"Estadísticas del año":"Estadísticas del mes";render();};
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(b.dataset.screen).classList.add("active");});
 window.addEventListener("online",sync);
 if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
