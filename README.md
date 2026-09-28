@@ -45,15 +45,15 @@ Un único Google Sheet puede almacenar los movimientos de los 3 usuarios. Cada m
 
 ### Usuarios
 
-La hoja `Usuarios` tiene:
+La hoja `Usuarios` conserva compatibilidad con las columnas antiguas y añade campos de seguridad:
 
-| user_id | email | nombre | pin_hash | access_token | activo |
-|---|---|---|---|---|---|
-| U001 | correo1 | Usuario 1 | hash | token | TRUE |
-| U002 | correo2 | Usuario 2 | hash | token | TRUE |
-| U003 | correo3 | Usuario 3 | hash | token | TRUE |
+| user_id | email | nombre | pin_hash | access_token | activo | pin_salt | pin_hash_v2 | session_token_hash | session_expires_at | failed_attempts | locked_until | session_created_at |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| U001 | correo1 | Usuario 1 | legacy | vacío | TRUE | salt | hash HMAC | hash HMAC | fecha | 0 | vacío | fecha |
 
-La aplicación nunca envía el PIN a Google Sheets como texto plano: Apps Script compara su hash SHA-256.
+El PIN nunca se guarda en texto plano. En el primer login correcto, el hash antiguo se migra a un hash HMAC-SHA-256 con salt y una clave privada almacenada en `Script Properties`. Apps Script ofrece `PropertiesService` para guardar configuración compartida del proyecto. citeturn0search0turn2search0
+
+Los tokens de sesión ya no se guardan en texto plano: se almacena únicamente su HMAC. Cada login genera un token nuevo y la sesión expira después de 30 días.
 
 ### Movimientos
 
@@ -64,11 +64,41 @@ La hoja `Movimientos` tiene:
 
 Esto permite que los tres usuarios compartan el mismo archivo sin mezclar sus movimientos.
 
-## Importante sobre seguridad
+## Seguridad y migración
 
-El Google Sheet debe permanecer privado. El Web App de Apps Script es el que accede a la hoja. La API valida el usuario y un token de sesión antes de leer o escribir movimientos.
+El Google Sheet debe permanecer privado. El Web App de Apps Script es el que accede a la hoja y se ejecuta bajo la identidad del propietario; Google documenta que esa elección determina qué datos puede acceder el Web App. citeturn0search1turn0search4
 
-El correo por sí solo no se usa como autenticación, porque cualquiera que conozca un correo podría hacerse pasar por ese usuario. Por eso la versión actual utiliza correo + PIN de 6 dígitos.
+La versión endurecida añade:
+
+- Tokens de sesión aleatorios, almacenados solo como HMAC.
+- Expiración de sesión a 30 días.
+- Rotación del token en cada login.
+- Revocación real mediante `logout`.
+- Límite de 5 intentos fallidos y bloqueo temporal de 15 minutos.
+- Mensaje genérico de login para reducir enumeración de usuarios.
+- Migración automática de los hashes antiguos de PIN al primer login correcto.
+- Validación de tipo, monto, fechas, categorías y notas.
+- Protección frente a fórmulas introducidas como texto en Google Sheets.
+- Comprobación de autorización por `user_id` para listar, modificar y eliminar movimientos.
+- `LockService` alrededor de escrituras sensibles para evitar carreras entre solicitudes concurrentes.
+
+Apps Script tiene cuotas y límites propios, por lo que el rate-limit de la aplicación es una capa adicional y no debe confundirse con las cuotas generales de Google. citeturn0search2
+
+### Migración
+
+No vuelvas a ejecutar una versión antigua de `setupDatabase()`: la versión actual es idempotente y **no borra los movimientos existentes**.
+
+Después de actualizar `Code.gs`:
+
+1. Abre Apps Script.
+2. Reemplaza `Code.gs` por la versión del repositorio.
+3. Ejecuta `setupDatabase()` una vez.
+4. Autoriza el proyecto si Google lo solicita.
+5. Vuelve a implementar el Web App como nueva versión del despliegue.
+6. Abre la APK/PWA e inicia sesión nuevamente.
+7. El primer login correcto migra automáticamente el PIN al formato endurecido.
+
+El secreto del servidor se genera y guarda en `Script Properties`; no debe copiarse al frontend ni al repositorio. citeturn0search0
 
 ## Despliegue de la PWA
 
