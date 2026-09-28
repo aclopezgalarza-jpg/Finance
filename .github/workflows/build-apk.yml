@@ -217,7 +217,7 @@ jobs:
               return sb.toString();
             }
           }
-EOF
+          EOF
           gradle wrapper --gradle-version 8.10.2
           ./gradlew assembleDebug
 
