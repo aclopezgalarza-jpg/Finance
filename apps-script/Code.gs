@@ -14,7 +14,7 @@
  * 7) Implementa como Web App ejecutando como tú y acceso "Cualquiera".
  */
 
-const SPREADSHEET_ID = "PEGA_AQUI_EL_ID_DE_TU_GOOGLE_SHEET";
+const SPREADSHEET_ID = "1p28vCB9VL_C_fsmgYyptJlKagq0davxVmcgWYJWg3nk";
 const USERS_SHEET = "Usuarios";
 const TX_SHEET = "Movimientos";
 
