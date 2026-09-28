@@ -19,12 +19,25 @@ const USERS_SHEET = "Usuarios";
 const TX_SHEET = "Movimientos";
 
 function doGet(e) {
-  return json_({ ok: true, service: "Finance API", version: "1.0" });
+  return json_({
+    ok: true,
+    service: "Finance API",
+    version: "1.1",
+    backend: "Google Sheets"
+  });
 }
 
 function doPost(e) {
   try {
-    const body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+    const raw = (e && e.postData && e.postData.contents) || "";
+    if (!raw) return json_({ ok: false, error: "Cuerpo de solicitud vacío." });
+
+    let body;
+    try {
+      body = JSON.parse(raw);
+    } catch (parseErr) {
+      return json_({ ok: false, error: "Solicitud JSON inválida." });
+    }
     const action = String(body.action || "");
 
     if (action === "login") return login_(body);
@@ -150,6 +163,12 @@ function upsert_(body) {
 
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) === id) {
+      if (String(rows[i][1]) !== auth.userId) {
+        return json_({
+          ok: false,
+          error: "No tienes permiso para modificar este movimiento."
+        });
+      }
       found = i + 1;
       break;
     }
