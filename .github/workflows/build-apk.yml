@@ -184,10 +184,8 @@ jobs:
                     ok = code >= 200 && code < 300;
 
                   } catch (Exception e) {
-                    response = new JSONObject()
-                        .put("ok", false)
-                        .put("error", "No se pudo conectar con Google Sheets: " + String.valueOf(e.getMessage()))
-                        .toString();
+                    String errorMessage = "No se pudo conectar con Google Sheets: " + String.valueOf(e.getMessage());
+                    response = "{\"ok\":false,\"error\":" + JSONObject.quote(errorMessage) + "}";
                   } finally {
                     if (conn != null) conn.disconnect();
                   }
