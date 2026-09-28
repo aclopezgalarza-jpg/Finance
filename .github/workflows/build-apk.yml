@@ -142,7 +142,7 @@ jobs:
                     response = readAll(stream);
                     ok = code >= 200 && code < 400;
                   } catch (Exception e) {
-                    response = new JSONObject().put("ok", false).put("error", "No se pudo conectar con Google Sheets: " + e.getMessage()).toString();
+                    response = "{\"ok\":false,\"error\":" + JSONObject.quote("No se pudo conectar con Google Sheets: " + e.getMessage()) + "}";
                   } finally {
                     if (conn != null) conn.disconnect();
                   }
