@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#111827" />
   <meta name="description" content="Finanzas personales: ingresos, gastos, ahorros y metas." />
   <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="icon" href="/icons/icon.svg" />
-  <link rel="apple-touch-icon" href="/icons/icon.svg" />
+  <link rel="icon" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
   <title>Mis Finanzas</title>
   <style>
     :root{--bg:#f5f7fb;--card:#fff;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--primary:#111827;--green:#087443;--red:#b42318;--blue:#2457d6}
@@ -18,7 +18,7 @@
 </head>
 
 <body>
-<div id="login" class="login show"><div class="card login-card"><img class="logo" src="/icons/icon.svg" alt="Finanzas"><h1>Mis Finanzas</h1><p id="authText">Vincula tu cuenta para sincronizar tus finanzas en tus dispositivos.</p><input id="email" type="email" placeholder="Tu correo electrónico" autocomplete="email"><button class="primary" id="startBtn">Enviar código</button><input id="otp" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" style="display:none"><button class="primary" id="verifyBtn" style="display:none">Verificar y entrar</button><button class="secondary" id="backBtn" style="display:none;width:100%;margin-top:9px">Cambiar correo</button><div class="install" id="authStatus">La sesión queda guardada en este dispositivo.</div></div></div>
+<div id="login" class="login show"><div class="card login-card"><img class="logo" src="icons/icon.svg" alt="Finanzas"><h1>Mis Finanzas</h1><p id="authText">Vincula tu cuenta para sincronizar tus finanzas en tus dispositivos.</p><input id="email" type="email" placeholder="Tu correo electrónico" autocomplete="email"><button class="primary" id="startBtn">Enviar código</button><input id="otp" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" style="display:none"><button class="primary" id="verifyBtn" style="display:none">Verificar y entrar</button><button class="secondary" id="backBtn" style="display:none;width:100%;margin-top:9px">Cambiar correo</button><div class="install" id="authStatus">La sesión queda guardada en este dispositivo.</div></div></div>
 <main id="app" class="app" style="display:none">
 <header class="top"><div><div class="brand">Mis Finanzas</div><div class="month" id="monthLabel"></div></div><span class="pill" id="userEmail"></span></header>
 <section id="home" class="screen active"><div class="card"><div class="balance-label">Saldo disponible</div><div class="balance" id="balance">S/ 0.00</div><div class="stats"><div class="stat"><small>Ingresos</small><strong class="green" id="income">S/ 0.00</strong></div><div class="stat"><small>Gastos</small><strong class="red" id="expense">S/ 0.00</strong></div><div class="stat"><small>Ahorros</small><strong class="blue" id="saving">S/ 0.00</strong></div></div><button class="primary" id="openModal">＋ Registrar movimiento</button></div><div class="section-title">Últimos movimientos</div><div class="card" id="recent"></div></section>
@@ -95,7 +95,7 @@ document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{currentType=b
 document.getElementById("syncNow").onclick=sync;document.getElementById("signOut").onclick=async()=>{await supabase.auth.signOut();user=null;items=[];showLogin();};
 document.getElementById("clearData").onclick=()=>{if(confirm("¿Borrar los datos locales? Los datos de la nube no se borrarán.")){localStorage.removeItem(localKey());items=[];render();}};
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(b.dataset.screen).classList.add("active");});
-window.addEventListener("online",sync);if("serviceWorker"in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
+window.addEventListener("online",sync);if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 const session=(await supabase.auth.getSession()).data.session;if(session){user=session.user;await initializeUser();showApp();}else showLogin();
 supabase.auth.onAuthStateChange(async(_event,s)=>{if(s&&s.user){user=s.user;await initializeUser();showApp();}});
 </script></body></html>
