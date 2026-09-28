@@ -1,1 +1,14 @@
-{"name":"Mis Finanzas","short_name":"Finanzas","description":"Control de ingresos, gastos, ahorros y metas.","start_url":"/","scope":"/","display":"standalone","background_color":"#f5f7fb","theme_color":"#111827","lang":"es-PE","icons":[{"src":"/icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{
+  "name":"Mis Finanzas",
+  "short_name":"Finanzas",
+  "description":"Control de ingresos, gastos, ahorros y metas.",
+  "start_url":"/",
+  "scope":"/",
+  "display":"standalone",
+  "background_color":"#f5f7fb",
+  "theme_color":"#111827",
+  "lang":"es-PE",
+  "icons":[
+    {"src":"/assets/finance-image.jpg","sizes":"any","type":"image/jpeg","purpose":"any maskable"}
+  ]
+}
