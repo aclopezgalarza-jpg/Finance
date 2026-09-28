@@ -172,15 +172,16 @@ function login_(body) {
       // Releer por si otro login ocurrió al mismo tiempo.
       const freshSalt = String(fresh[schema.pin_salt] || "");
       const pinSalt = freshSalt || randomToken_();
-      const pinHashV2 = freshSalt
-        ? String(fresh[schema.pin_hash_v2] || "")
-        : pinHashV2_(pin, pinSalt);
+      const currentV2 = String(fresh[schema.pin_hash_v2] || "");
+      const expectedV2 = pinHashV2_(pin, pinSalt);
 
-      if (!pinHashV2 || !secureEqual_(pinHashV2, pinHashV2_(pin, pinSalt))) {
+      if (!freshSalt || !currentV2 || !secureEqual_(currentV2, expectedV2)) {
         sheet.getRange(i + 1, schema.pin_salt + 1).setValue(pinSalt);
-        sheet.getRange(i + 1, schema.pin_hash_v2 + 1).setValue(pinHashV2_(pin, pinSalt));
-      } else if (String(fresh[schema.pin_hash] || "")) {
-        // Borra el hash legacy una vez que ya existe el formato endurecido.
+        sheet.getRange(i + 1, schema.pin_hash_v2 + 1).setValue(expectedV2);
+      }
+
+      // Borra el hash legacy después de migrar el PIN correctamente.
+      if (String(fresh[schema.pin_hash] || "")) {
         sheet.getRange(i + 1, schema.pin_hash + 1).clearContent();
       }
 
