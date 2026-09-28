@@ -27,7 +27,8 @@ jobs:
       - name: Build APK from web app
         run: |
           mkdir -p android/app/src/main/assets/www
-          cp index.html manifest.webmanifest sw.js android/app/src/main/assets/www/
+          cp index.html manifest.webmanifest sw.js supabase-config.js android/app/src/main/assets/www/
+          if [ -n "${{ secrets.SUPABASE_PUBLISHABLE_KEY }}" ]; then sed -i "s|SUPABASE_ANON_KEY|${{ secrets.SUPABASE_PUBLISHABLE_KEY }}|g" android/app/src/main/assets/www/supabase-config.js; fi
           cp -r icons android/app/src/main/assets/www/
           cat > settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
