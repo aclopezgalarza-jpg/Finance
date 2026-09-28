@@ -38,7 +38,7 @@ const money=n=>"S/ "+Number(n||0).toLocaleString("es-PE",{minimumFractionDigits:
 const monthKey=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")};
 const localKey=()=>user?"finance-v2:"+user.id:LEGACY_KEY;
 const queueKey=()=>user?"finance-sync:"+user.id:"finance-sync:anon";
-const sessionKey=()=>user?"finance-session:"+user.id:"finance-session";
+const sessionKey=()=>"finance-session";
 const readLocal=()=>JSON.parse(localStorage.getItem(localKey())||"[]");
 const writeLocal=x=>localStorage.setItem(localKey(),JSON.stringify(x));
 const readQueue=()=>JSON.parse(localStorage.getItem(queueKey())||"[]");
@@ -62,7 +62,7 @@ function render(){
  document.getElementById("income").textContent=money(inc);
  document.getElementById("expense").textContent=money(exp);
  document.getElementById("saving").textContent=money(sav);
- document.getElementById("recent").innerHTML=a.slice().sort((x,y)=>new Date(y.occurred_at||x.date)-new Date(x.occurred_at||y.date)).slice(0,8).map(x=>"<div class=\"row\"><div class=\"row-main\"><strong>"+esc(x.note||x.category)+"</strong><span>"+esc(x.category)+" · "+new Date(x.occurred_at||x.date).toLocaleDateString("es-PE")+"</span></div><strong class=\""+(x.type==="income"?"green":x.type==="saving"?"blue":"red")+"\">"+(x.type==="income"?"+":"-")+money(x.amount)+"</strong></div>").join("")||"<div class=\"empty\">Aún no hay movimientos este mes.</div>";
+ document.getElementById("recent").innerHTML=a.slice().sort((x,y)=>new Date(y.occurred_at||y.date)-new Date(x.occurred_at||x.date)).slice(0,8).map(x=>"<div class=\"row\"><div class=\"row-main\"><strong>"+esc(x.note||x.category)+"</strong><span>"+esc(x.category)+" · "+new Date(x.occurred_at||x.date).toLocaleDateString("es-PE")+"</span></div><strong class=\""+(x.type==="income"?"green":x.type==="saving"?"blue":"red")+"\">"+(x.type==="income"?"+":"-")+money(x.amount)+"</strong></div>").join("")||"<div class=\"empty\">Aún no hay movimientos este mes.</div>";
  document.getElementById("summary").innerHTML="<div class=\"row\"><span>Ingresos</span><strong class=\"green\">"+money(inc)+"</strong></div><div class=\"row\"><span>Gastos</span><strong class=\"red\">"+money(exp)+"</strong></div><div class=\"row\"><span>Ahorros</span><strong class=\"blue\">"+money(sav)+"</strong></div><div class=\"row\"><span>Disponible</span><strong>"+money(inc-exp-sav)+"</strong></div>";
  const cats={};a.filter(x=>x.type==="expense").forEach(x=>cats[x.category]=(cats[x.category]||0)+ +x.amount);
  document.getElementById("categories").innerHTML=Object.entries(cats).sort((x,y)=>y[1]-x[1]).map(x=>"<div class=\"row\"><span>"+esc(x[0])+"</span><strong>"+money(x[1])+"</strong></div>").join("")||"<div class=\"empty\">Tus categorías aparecerán aquí.</div>";
