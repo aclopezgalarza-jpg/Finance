@@ -89,22 +89,84 @@ jobs:
 
           import android.app.Activity;
           import android.os.Bundle;
+          import android.webkit.JavascriptInterface;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import android.view.Window;
+          import java.io.BufferedReader;
+          import java.io.InputStream;
+          import java.io.InputStreamReader;
+          import java.io.OutputStream;
+          import java.net.HttpURLConnection;
+          import java.net.URL;
+          import java.nio.charset.StandardCharsets;
+          import org.json.JSONObject;
 
           public class MainActivity extends Activity {
+            private WebView webView;
+
             @Override
             public void onCreate(Bundle b) {
               super.onCreate(b);
               requestWindowFeature(Window.FEATURE_NO_TITLE);
-              WebView w = new WebView(this);
-              w.setWebViewClient(new WebViewClient());
-              w.getSettings().setJavaScriptEnabled(true);
-              w.getSettings().setDomStorageEnabled(true);
-              w.getSettings().setAllowFileAccess(true);
-              w.loadUrl("file:///android_asset/www/index.html");
-              setContentView(w);
+              webView = new WebView(this);
+              webView.setWebViewClient(new WebViewClient());
+              webView.getSettings().setJavaScriptEnabled(true);
+              webView.getSettings().setDomStorageEnabled(true);
+              webView.getSettings().setAllowFileAccess(true);
+              webView.addJavascriptInterface(new FinanceBridge(), "AndroidFinance");
+              webView.loadUrl("file:///android_asset/www/index.html");
+              setContentView(webView);
+            }
+
+            private class FinanceBridge {
+              @JavascriptInterface
+              public void request(final String payload, final String requestId) {
+                new Thread(() -> {
+                  boolean ok = false;
+                  String response;
+                  HttpURLConnection conn = null;
+                  try {
+                    URL url = new URL("https://script.google.com/macros/s/AKfycbxTjFz6HbRs8zzgqtI4_NvsooLalnJr6oZO7ZgLsknzRnRnW9E_8StuUq6n6IBEiyw/exec");
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setDoOutput(true);
+                    conn.setConnectTimeout(20000);
+                    conn.setReadTimeout(30000);
+                    conn.setRequestProperty("Content-Type", "text/plain; charset=UTF-8");
+                    try (OutputStream os = conn.getOutputStream()) {
+                      os.write(payload.getBytes(StandardCharsets.UTF_8));
+                    }
+                    int code = conn.getResponseCode();
+                    InputStream stream = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+                    response = readAll(stream);
+                    ok = code >= 200 && code < 400;
+                  } catch (Exception e) {
+                    response = new JSONObject().put("ok", false).put("error", "No se pudo conectar con Google Sheets: " + e.getMessage()).toString();
+                  } finally {
+                    if (conn != null) conn.disconnect();
+                  }
+                  final boolean resultOk = ok;
+                  final String resultResponse = response;
+                  runOnUiThread(() -> {
+                    String script = "window.__financeNativeCallback(" +
+                        JSONObject.quote(requestId) + "," +
+                        resultOk + "," +
+                        JSONObject.quote(resultResponse) + ")";
+                    webView.evaluateJavascript(script, null);
+                  });
+                }).start();
+              }
+            }
+
+            private String readAll(InputStream stream) throws Exception {
+              if (stream == null) return "{}";
+              StringBuilder sb = new StringBuilder();
+              try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line);
+              }
+              return sb.toString();
             }
           }
           EOF
