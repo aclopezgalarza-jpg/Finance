@@ -25,7 +25,7 @@ jobs:
 
       - name: Build APK from web app
         run: |
-          mkdir -p android/app/src/main/assets/www
+          mkdir -p android/app/src/main/assets/www android/app/src/main/java/com/finance/app android/app/src/main/res/values
           cp index.html manifest.webmanifest sw.js supabase-config.js android/app/src/main/assets/www/
           if [ -n "${{ secrets.SUPABASE_PUBLISHABLE_KEY }}" ]; then sed -i "s|SUPABASE_ANON_KEY|${{ secrets.SUPABASE_PUBLISHABLE_KEY }}|g" android/app/src/main/assets/www/supabase-config.js; fi
           cp -r icons android/app/src/main/assets/www/
@@ -58,7 +58,6 @@ jobs:
             </application>
           </manifest>
           EOF
-          mkdir -p android/app/src/main/java/com/finance/app android/app/src/main/res/values
           cat > android/app/src/main/res/values/styles.xml <<'EOF'
           <resources><style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">#111827</item><item name="android:navigationBarColor">#ffffff</item><item name="android:statusBarColor">#ffffff</item><item name="android:windowLightStatusBar">true</item></style></resources>
           EOF
