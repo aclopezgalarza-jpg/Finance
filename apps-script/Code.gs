@@ -7,7 +7,7 @@
  * failed_attempts | locked_until | session_created_at
  *
  * Estructura Movimientos:
- * id | user_id | type | amount | category | note | occurred_at | created_at
+ * id | user_id | type | amount | category | note | funding_source | occurred_at | created_at
  *
  * IMPORTANTE:
  * - El Web App debe ejecutarse como propietario.
@@ -34,7 +34,7 @@ const USER_HEADERS = [
 ];
 
 const TX_HEADERS = [
-  "id", "user_id", "type", "amount", "category", "note", "occurred_at", "created_at"
+  "id", "user_id", "type", "amount", "category", "note", "funding_source", "occurred_at", "created_at"
 ];
 
 function doGet() {
@@ -264,6 +264,7 @@ function list_(body) {
       amount: Number(r[schema.amount]) || 0,
       category: String(r[schema.category] || "Otros"),
       note: r[schema.note] == null ? null : String(r[schema.note]),
+      funding_source: String(r[schema.funding_source] || ""),
       occurred_at: String(r[schema.occurred_at] || ""),
       created_at: String(r[schema.created_at] || "")
     });
@@ -283,7 +284,7 @@ function upsert_(body) {
   }
 
   const type = String(row.type || "expense");
-  if (["expense", "income", "saving"].indexOf(type) === -1) {
+  if (["expense", "income", "saving", "saving_initial"].indexOf(type) === -1) {
     return json_({ ok: false, code: "INVALID_INPUT", error: "Tipo de movimiento inválido." });
   }
 
@@ -294,6 +295,7 @@ function upsert_(body) {
 
   const category = cleanText_(row.category || "Otros", MAX_CATEGORY) || "Otros";
   const note = row.note == null ? "" : cleanText_(row.note, MAX_NOTE);
+  const fundingSource = type === "expense" && String(row.funding_source || "") === "savings" ? "savings" : "";
   const occurredAt = validIso_(row.occurred_at) || new Date().toISOString();
   const createdAt = validIso_(row.created_at) || new Date().toISOString();
 
@@ -327,6 +329,7 @@ function upsert_(body) {
       amount,
       safeCellText_(category),
       safeCellText_(note),
+      safeCellText_(fundingSource),
       safeCellText_(occurredAt),
       safeCellText_(createdAt)
     ]];
