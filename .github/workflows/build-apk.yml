@@ -69,8 +69,8 @@ jobs:
               applicationId 'com.finance.app'
               minSdk 23
               targetSdk 35
-              versionCode 3
-              versionName '3.0.0'
+              versionCode 4
+              versionName '3.0.1'
             }
           }
           EOF
@@ -179,10 +179,16 @@ jobs:
                       URL redirected = new URL(url, location);
                       conn = (HttpURLConnection) redirected.openConnection();
                       conn.setInstanceFollowRedirects(false);
-                      conn.setRequestMethod("GET");
+                      conn.setRequestMethod("POST");
+                      conn.setDoOutput(true);
                       conn.setConnectTimeout(20000);
                       conn.setReadTimeout(30000);
+                      conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                       conn.setRequestProperty("Accept", "application/json");
+
+                      try (OutputStream os = conn.getOutputStream()) {
+                        os.write(payload.getBytes(StandardCharsets.UTF_8));
+                      }
                       code = conn.getResponseCode();
                     }
 
@@ -241,6 +247,7 @@ jobs:
         run: |
           test -s android/app/build/outputs/apk/debug/app-debug.apk
           ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+          sha256sum android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
