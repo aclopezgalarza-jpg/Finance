@@ -30,7 +30,7 @@
 <section id="settings" class="screen"><div class="section-title">Cuenta y datos</div><div class="card"><div class="row"><div class="row-main"><strong>Correo</strong><span id="settingsEmail"></span></div></div><div class="row"><div class="row-main"><strong>Sincronización</strong><span id="syncStatus">Preparando…</span></div></div><button class="secondary" style="width:100%;margin-top:14px" id="syncNow">Sincronizar ahora</button><button class="secondary" style="width:100%;margin-top:9px" id="signOut">Cerrar sesión</button><button class="secondary" style="width:100%;margin-top:9px" id="clearData">Borrar datos locales</button></div></section>
 </main>
 <nav id="nav" class="nav" style="display:none"><div class="nav-inner"><button class="active" data-screen="home"><b>⌂</b>Inicio</button><button data-screen="stats"><b>◔</b>Estadísticas</button><button data-screen="settings"><b>⚙</b>Ajustes</button></div></nav>
-<div class="modal" id="modal"><div class="sheet"><h2>Registrar movimiento</h2><div class="type"><button data-type="expense" class="sel">Gasto</button><button data-type="income">Ingreso</button><button data-type="saving">Ahorro</button></div><div class="field"><label>Monto</label><input id="amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Categoría</label><select id="category"><option>Alimentación</option><option>Transporte</option><option>Hogar</option><option>Trabajo</option><option>Salud</option><option>Entretenimiento</option><option>Compras</option><option>Otros</option></select></div><div class="field"><label>Descripción</label><input id="note" placeholder="Ej. Almuerzo"></div><div class="actions"><button class="secondary" id="cancel">Cancelar</button><button class="primary" style="margin:0" id="save">Guardar</button></div></div></div>
+<div class="modal" id="modal"><div class="sheet"><h2>Registrar movimiento</h2><div class="type"><button data-type="expense" class="sel">Gasto</button><button data-type="income">Ingreso</button><button data-type="saving">Ahorro</button><button data-type="saving_initial">Ahorro previo</button></div><div class="field"><label>Monto</label><input id="amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Categoría</label><select id="category"><option>Alimentación</option><option>Transporte</option><option>Hogar</option><option>Trabajo</option><option>Salud</option><option>Entretenimiento</option><option>Compras</option><option>Otros</option></select></div><div class="field" id="fundingField" style="display:none"><label>¿De dónde sale el dinero?</label><select id="fundingSource"><option value="available">Dinero disponible</option><option value="savings">Ahorro acumulado</option></select><div style="font-size:11px;color:var(--muted);margin-top:5px">Si eliges ahorro acumulado, el gasto reduce tus ahorros, pero no vuelve a descontarse del ingreso del mes.</div></div><div class="field"><label>Descripción</label><input id="note" placeholder="Ej. Almuerzo"></div><div class="actions"><button class="secondary" id="cancel">Cancelar</button><button class="primary" style="margin:0" id="save">Guardar</button></div></div></div>
 <script src="google-config.js"></script>
 <script type="module">
 setTimeout(()=>document.getElementById("splash")?.classList.add("hide"),1200);
@@ -91,6 +91,10 @@ async function api(payload){
 let statsPeriod="month";
 let selectedPieCategory="";
 const fmtMoney=n=>"S/ "+Number(n||0).toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2});
+function isSavingIn(x){return x.type==="saving"||x.type==="saving_initial";}
+function isSavingsExpense(x){return x.type==="expense"&&(x.funding_source==="savings"||x.funding==="savings");}
+function savingsBalance(list=items){let total=0;list.forEach(x=>{const n=Number(x.amount||0);if(isSavingIn(x))total+=n;else if(isSavingsExpense(x))total-=n;});return total;}
+function cashExpense(x){return x.type==="expense"&&!isSavingsExpense(x);}
 function statsItems(){
  const now=new Date();
  return items.filter(x=>{
@@ -135,12 +139,12 @@ function renderPie(){
 function render(){
  const m=monthKey(new Date()),a=items.filter(x=>monthKey(x.occurred_at||x.date)===m);
  const sa=statsItems();
- let inc=0,exp=0,sav=0;
- a.forEach(x=>{if(x.type==="income")inc+=+x.amount;if(x.type==="expense")exp+=+x.amount;if(x.type==="saving")sav+=+x.amount});
+ let inc=0,exp=0,sav=0,usedSav=0;
+ a.forEach(x=>{if(x.type==="income")inc+=+x.amount;if(cashExpense(x))exp+=+x.amount;if(x.type==="saving")sav+=+x.amount;if(isSavingsExpense(x))usedSav+=+x.amount});
  document.getElementById("balance").textContent=money(inc-exp-sav,"balance");
  document.getElementById("income").textContent=money(inc,"income");
- document.getElementById("expense").textContent=money(exp,"expense");
- document.getElementById("saving").textContent=money(sav,"saving");
+ document.getElementById("expense").textContent=money(exp+usedSav,"expense");
+ document.getElementById("saving").textContent=money(savingsBalance(),"saving");
  document.getElementById("recent").innerHTML=a.slice().sort((x,y)=>new Date(y.occurred_at||y.date)-new Date(x.occurred_at||x.date)).slice(0,8).map(x=>"<div class=\"row movement-row\"><div class=\"row-main\"><strong>"+esc(x.note||x.category)+"</strong><span>"+esc(x.category)+" · "+new Date(x.occurred_at||x.date).toLocaleDateString("es-PE")+"</span></div><div class=\"movement-actions\"><strong class=\""+(x.type==="income"?"green":x.type==="saving"?"blue":"red")+"\">"+(x.type==="income"?"+":"-")+(privacy.movements?("S/ "+Number(x.amount||0).toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2})):hiddenMoney)+"</strong><button class=\"mini-btn\" onclick=\"editMovement('"+esc(x.id)+"')\" aria-label=\"Editar movimiento\">✎</button><button class=\"mini-btn danger\" onclick=\"deleteMovement('"+esc(x.id)+"')\" aria-label=\"Eliminar movimiento\">×</button></div></div>").join("")||"<div class=\"empty\">Aún no hay movimientos este mes.</div>";
  let sinc=0,sexp=0,ssav=0;sa.forEach(x=>{if(x.type==="income")sinc+=+x.amount;if(x.type==="expense")sexp+=+x.amount;if(x.type==="saving")ssav+=+x.amount});
  document.getElementById("summary").innerHTML="<div class=\"row\"><span>Ingresos</span><strong class=\"green\">"+money(sinc,"summary")+"</strong></div><div class=\"row\"><span>Gastos</span><strong class=\"red\">"+money(sexp,"summary")+"</strong></div><div class=\"row\"><span>Ahorros</span><strong class=\"blue\">"+money(ssav,"summary")+"</strong></div><div class=\"row\"><span>Disponible</span><strong>"+money(sinc-sexp-ssav,"summary")+"</strong></div>";
@@ -246,7 +250,7 @@ async function sync(){
   const legacy=JSON.parse(localStorage.getItem(LEGACY_KEY)||"[]");
   if(local.length===0&&legacy.length){
    for(const x of legacy){
-    const row={id:x.id||crypto.randomUUID(),user_id:user.id,type:x.type,amount:+x.amount,category:x.category||"Otros",note:x.note||null,occurred_at:x.date||new Date().toISOString(),created_at:x.date||new Date().toISOString()};
+    const row={id:x.id||crypto.randomUUID(),user_id:user.id,type:x.type,amount:+x.amount,category:x.category||"Otros",note:x.note||null,funding_source:x.funding_source||"",occurred_at:x.date||new Date().toISOString(),created_at:x.date||new Date().toISOString()};
     try{await api({action:"upsert",user_id:user.id,token:session.token,row});map.set(row.id,row);}catch(e){}
    }
    localStorage.removeItem(LEGACY_KEY);
@@ -268,6 +272,8 @@ function openMovementEditor(row){
  document.getElementById("amount").value=String(row.amount??"");
  document.getElementById("category").value=row.category||"Otros";
  document.getElementById("note").value=row.note||"";
+ document.getElementById("fundingSource").value=row.funding_source||"available";
+ document.getElementById("fundingField").style.display=currentType==="expense"?"block":"none";
  document.getElementById("modal").classList.add("show");
  document.getElementById("save").dataset.editId=String(row.id);
  document.getElementById("save").textContent="Guardar cambios";
@@ -304,16 +310,23 @@ async function saveMovement(){
  const category=document.getElementById("category").value||"Otros";
  const note=document.getElementById("note").value.trim()||null;
  const editId=document.getElementById("save").dataset.editId||"";
+ const funding_source=currentType==="expense"?(document.getElementById("fundingSource").value||"available"):"";
+ if(funding_source==="savings"){
+   const previous=editId?getMovement(editId):null;
+   const previousUsed=previous&&isSavingsExpense(previous)?Number(previous.amount||0):0;
+   const availableSavings=savingsBalance(items)+previousUsed;
+   if(amount>availableSavings)return alert("El ahorro acumulado disponible es de "+fmtMoney(availableSavings)+".");
+ }
  let row;
 
  if(editId){
    const old=getMovement(editId);
    if(!old)return;
-   row={...old,user_id:user.id,type:currentType,amount,category,note,occurred_at:old.occurred_at||new Date().toISOString(),created_at:old.created_at||new Date().toISOString()};
+   row={...old,user_id:user.id,type:currentType,amount,category,note,funding_source,occurred_at:old.occurred_at||new Date().toISOString(),created_at:old.created_at||new Date().toISOString()};
    items=items.map(x=>String(x.id)===String(editId)?row:x);
  }else{
    const now=new Date().toISOString();
-   row={id:crypto.randomUUID(),user_id:user.id,type:currentType,amount,category,note,occurred_at:now,created_at:now};
+   row={id:crypto.randomUUID(),user_id:user.id,type:currentType,amount,category,note,funding_source,occurred_at:now,created_at:now};
    items.unshift(row);
  }
  writeLocal(items);render();
@@ -337,14 +350,14 @@ document.getElementById("startBtn").onclick=login;
 document.getElementById("togglePrivacy").onclick=()=>togglePrivacy("balance");
 document.querySelectorAll("[data-privacy]").forEach(b=>b.onclick=()=>togglePrivacy(b.dataset.privacy));
 document.getElementById("toggleMovements").onclick=()=>togglePrivacy("movements");
-document.getElementById("openModal").onclick=()=>document.getElementById("modal").classList.add("show");
+document.getElementById("openModal").onclick=()=>{currentType="expense";document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("sel",x.dataset.type==="expense"));document.getElementById("fundingSource").value="available";document.getElementById("fundingField").style.display="block";document.getElementById("modal").classList.add("show");};
 document.getElementById("cancel").onclick=()=>{
  document.getElementById("save").dataset.editId="";
  document.getElementById("save").textContent="Guardar";
  document.getElementById("modal").classList.remove("show");
 };
 document.getElementById("save").onclick=saveMovement;
-document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{currentType=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("sel",x===b));});
+document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{currentType=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("sel",x===b));document.getElementById("fundingField").style.display=currentType==="expense"?"block":"none";});
 document.getElementById("syncNow").onclick=sync;
 document.getElementById("signOut").onclick=async()=>{
  const session=JSON.parse(localStorage.getItem(sessionKey())||"null");
