@@ -55,8 +55,8 @@ jobs:
               applicationId 'com.finance.app'
               minSdk 23
               targetSdk 35
-              versionCode 2
-              versionName '2.0.0'
+              versionCode 3
+              versionName '3.0.0'
             }
           }
           EOF
@@ -64,7 +64,7 @@ jobs:
           cat > android/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
-            <application android:theme="@style/AppTheme" android:label="Finance" android:icon="@drawable/finance_image" android:roundIcon="@drawable/finance_image" android:usesCleartextTraffic="true">
+            <application android:theme="@style/AppTheme" android:label="Finance" android:icon="@drawable/finance_image" android:roundIcon="@drawable/finance_image" android:usesCleartextTraffic="false">
               <activity android:name=".MainActivity" android:exported="true">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN"/>
@@ -96,6 +96,7 @@ jobs:
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import android.view.Window;
+          import android.view.WindowManager;
           import java.io.BufferedReader;
           import java.io.InputStream;
           import java.io.InputStreamReader;
@@ -115,6 +116,7 @@ jobs:
             public void onCreate(Bundle b) {
               super.onCreate(b);
               requestWindowFeature(Window.FEATURE_NO_TITLE);
+              getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
               webView = new WebView(this);
               webView.setWebViewClient(new WebViewClient());
               webView.getSettings().setJavaScriptEnabled(true);
