@@ -2,6 +2,8 @@
 
 PWA de finanzas personales optimizada para Android.
 
+<!-- Trigger APK rebuild after Finance V3 updates -->
+
 ## Backend actual
 
 La aplicación ya no usa Supabase.
@@ -61,6 +63,7 @@ La hoja `Movimientos` tiene:
 
 | id | user_id | type | amount | category | note | occurred_at | created_at |
 |---|---|---|---:|---|---|---|---|
+| | | | | | | | |
 
 Esto permite que los tres usuarios compartan el mismo archivo sin mezclar sus movimientos.
 
