@@ -177,18 +177,14 @@ jobs:
                       }
 
                       URL redirected = new URL(url, location);
+                      // Apps Script ContentService returns a one-time googleusercontent URL
+                      // that must be fetched with GET. Re-sending POST here causes HTTP 405.
                       conn = (HttpURLConnection) redirected.openConnection();
                       conn.setInstanceFollowRedirects(false);
-                      conn.setRequestMethod("POST");
-                      conn.setDoOutput(true);
+                      conn.setRequestMethod("GET");
                       conn.setConnectTimeout(20000);
                       conn.setReadTimeout(30000);
-                      conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                       conn.setRequestProperty("Accept", "application/json");
-
-                      try (OutputStream os = conn.getOutputStream()) {
-                        os.write(payload.getBytes(StandardCharsets.UTF_8));
-                      }
                       code = conn.getResponseCode();
                     }
 
