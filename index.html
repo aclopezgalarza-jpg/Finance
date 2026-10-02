@@ -143,10 +143,13 @@ function renderPie(){
  if(selectedPieCategory){const p=paths.find(x=>x.name===selectedPieCategory);if(p)show(p);}
 }
 function render(){
+ // El historial es permanente: el mes actual solo controla la vista mensual.
+ // Los saldos generales se calculan sobre TODO el historial.
  const m=monthKey(new Date()),a=items.filter(x=>monthKey(x.occurred_at||x.date)===m);
  const sa=statsItems();
  let inc=0,exp=0,sav=0,usedSav=0;
- a.forEach(x=>{if(x.type==="income")inc+=+x.amount;if(cashExpense(x))exp+=+x.amount;if(x.type==="saving")sav+=+x.amount;if(isSavingsExpense(x))usedSav+=+x.amount});
+ items.forEach(x=>{if(x.type==="income")inc+=Number(x.amount||0);if(cashExpense(x))exp+=Number(x.amount||0);if(x.type==="saving"||x.type==="saving_initial")sav+=Number(x.amount||0);if(isSavingsExpense(x))usedSav+=Number(x.amount||0)});
+ // El saldo disponible y los totales principales son acumulados; no se ponen a cero al cambiar de mes.
  document.getElementById("balance").textContent=money(inc-exp-sav,"balance");
  document.getElementById("income").textContent=money(inc,"income");
  document.getElementById("expense").textContent=money(exp+usedSav,"expense");
